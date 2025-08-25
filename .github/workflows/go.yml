@@ -17,7 +17,7 @@ on:
       - '**.go'
       - 'go.sum'
       - 'go.mod'
-      - '.github/workflows/go-checks.yml'
+      - '.github/workflows/go.yml'
       - '.goreleaser.yaml'
 
 permissions:
