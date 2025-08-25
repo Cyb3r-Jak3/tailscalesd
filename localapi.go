@@ -68,6 +68,7 @@ func (a *localAPIClient) status(ctx context.Context) (interestingStatusSubset, e
 		apiRequestErrorCounter.With(lv).Inc()
 		return status, err
 	}
+	defer resp.Body.Close()
 	if (resp.StatusCode / 100) != 2 {
 		apiRequestErrorCounter.With(lv).Inc()
 		return status, fmt.Errorf("%w: %v", errFailedLocalAPIRequest, resp.Status)

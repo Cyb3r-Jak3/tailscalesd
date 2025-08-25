@@ -2,15 +2,12 @@ package tailscalesd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"tailscale.com/client/tailscale/v2"
 )
-
-var errFailedAPIRequest = errors.New("failed API request")
 
 type apiDiscoverer struct {
 	client *tailscale.Client

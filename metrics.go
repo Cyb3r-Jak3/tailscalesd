@@ -68,10 +68,10 @@ var (
 			Help: "Counter of requests to a rate limited discoverer which result a return of stale results.",
 		})
 
-	tailnetDevicesFoundCounter = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "tailscalesd_public_api_devices_found",
-			Help: "Counter of devices found using the public API, labeled with tailnet name.",
-		},
-		[]string{"tailnet"})
+	//tailnetDevicesFoundCounter = promauto.NewCounterVec(
+	//	prometheus.CounterOpts{
+	//		Name: "tailscalesd_public_api_devices_found",
+	//		Help: "Counter of devices found using the public API, labeled with tailnet name.",
+	//	},
+	//	[]string{"tailnet"})
 )

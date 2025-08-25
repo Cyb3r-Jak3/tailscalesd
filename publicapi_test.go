@@ -1,18 +1,18 @@
 package tailscalesd
 
-import (
-	"net/url"
-	"testing"
-)
-
-func apiBaseForTest(tb testing.TB, surl string) string {
-	tb.Helper()
-	u, err := url.Parse(surl)
-	if err != nil {
-		tb.Fatal(err)
-	}
-	return u.Host
-}
+//import (
+//	"net/url"
+//	"testing"
+//)
+//
+//func apiBaseForTest(tb testing.TB, surl string) string {
+//	tb.Helper()
+//	u, err := url.Parse(surl)
+//	if err != nil {
+//		tb.Fatal(err)
+//	}
+//	return u.Host
+//}
 
 //func TestPublicAPIDiscovererDevices(t *testing.T) {
 //	var wantPath = "/api/v2/tailnet/testTailnet/devices"
