@@ -84,13 +84,13 @@ jobs:
       - name: Upload assets
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: atlas-exporter
+          name: tailscalesd
           path: dist/*
 
 
       - name: Upload to S3
         run: |
-          aws s3 cp dist/ s3://github-actions-artifacts/snapshots/atlas-exporter/${{ github.sha }} --recursive
+          aws s3 cp dist/ s3://github-actions-artifacts/snapshots/tailscalesd/${{ github.sha }} --recursive
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.ARTIFACTS_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.ARTIFACTS_AWS_SECRET_ACCESS_KEY }}
@@ -155,7 +155,7 @@ jobs:
       - name: Upload release assets
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: atlas-exporter-release
+          name: tailscalesd-release
           path: dist/*
 
       - name: Docker Hub Description
@@ -163,7 +163,7 @@ jobs:
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          repository: cyb3rjak3/atlas-exporter
+          repository: cyb3rjak3/tailscalesd
 
   CreateAttestation:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -175,7 +175,7 @@ jobs:
       - name: Download the release assets
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: atlas-exporter-release
+          name: tailscalesd-release
 
       - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
         with:
