@@ -1,12 +1,4 @@
-FROM golang:1 AS builder
-LABEL maintainer="Simon Elsbrock <simon@iodev.org>"
-LABEL org.opencontainers.image.description="Prometheus Service Discovery for Tailscale"
-
-COPY . ./build/tailscalesd/
-RUN cd ./build/tailscalesd && make
-
-FROM golang:1
-COPY --from=builder /go/build/tailscalesd/tailscalesd /tailscalesd
-
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:627d6c5a23ad24e6bdff827f16c7b60e0289029b0c79e9f7ccd54ae3279fb45f
+COPY tailscalesd /
 ENTRYPOINT ["/tailscalesd"]
-CMD []
+CMD ["-version"]

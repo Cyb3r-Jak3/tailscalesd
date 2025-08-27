@@ -6,28 +6,32 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime/debug"
 	"strings"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/Cyb3r-Jak3/tailscalesd"
+	"tailscale.com/client/tailscale/v2"
 
-	"github.com/cfunkhouser/tailscalesd"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
-	address        string = "0.0.0.0:9242"
+	address        = "0.0.0.0:9242"
 	includeIPv6    bool
-	localAPISocket string        = tailscalesd.LocalAPISocket
-	pollLimit      time.Duration = time.Minute * 5
+	localAPISocket = tailscalesd.LocalAPISocket
+	pollLimit      = time.Minute * 5
 	printVer       bool
 	tailnet        string
 	token          string
-	clientId       string
+	clientID       string
 	clientSecret   string
 	useLocalAPI    bool
 
 	// Version of tailscalesd. Set at build time to something meaningful.
 	Version = "development"
+	Commit  = "unknown"
+	Date    = "unknown"
 )
 
 func envVarWithDefault(key, def string) string {
@@ -64,7 +68,7 @@ func defineFlags() {
 	flag.StringVar(&address, "address", envVarWithDefault("LISTEN", address), "Address on which to serve Tailscale SD")
 	flag.StringVar(&localAPISocket, "localapi_socket", envVarWithDefault("TAILSCALE_LOCAL_API_SOCKET", localAPISocket), "Unix Domain Socket to use for communication with the local tailscaled API.")
 	flag.StringVar(&tailnet, "tailnet", os.Getenv("TAILNET"), "Tailnet name.")
-	flag.StringVar(&clientId, "client_id", os.Getenv("TAILSCALE_CLIENT_ID"), "Tailscale OAuth Client ID")
+	flag.StringVar(&clientID, "client_id", os.Getenv("TAILSCALE_CLIENT_ID"), "Tailscale OAuth Client ID")
 	flag.StringVar(&clientSecret, "client_secret", os.Getenv("TAILSCALE_CLIENT_SECRET"), "Tailscale OAuth Client Secret")
 	flag.StringVar(&token, "token", os.Getenv("TAILSCALE_API_TOKEN"), "Tailscale API Token")
 }
@@ -89,12 +93,16 @@ func main() {
 	flag.Parse()
 
 	if printVer {
-		fmt.Printf("tailscalesd version %v\n", Version)
+		versionString := fmt.Sprintf("%s (built %s)", Version, Date)
+		if buildInfo, available := debug.ReadBuildInfo(); available {
+			versionString = fmt.Sprintf("%s (built %s with %s)", Version, Date, buildInfo.GoVersion)
+		}
+		fmt.Printf("tailscalesd version %s\n", versionString)
 		return
 	}
 
-	hasToken := !(token == "" || tailnet == "")
-	hasOAuth := clientId != "" && clientSecret != ""
+	hasToken := token != "" && tailnet != ""
+	hasOAuth := clientID != "" && clientSecret != ""
 
 	if !useLocalAPI && !hasToken && !hasOAuth {
 		if _, err := fmt.Fprintln(os.Stderr, "Either -token and -tailnet or -client_id and -client_secret are required when using the public API"); err != nil {
@@ -121,15 +129,26 @@ func main() {
 	}
 
 	if token != "" && tailnet != "" {
+		tsClient := &tailscale.Client{
+			Tailnet: tailnet,
+			APIKey:  token,
+		}
 		ts = append(ts, &tailscalesd.RateLimitedDiscoverer{
-			Wrap:      tailscalesd.PublicAPI(tailnet, token),
+			Wrap:      tailscalesd.PublicAPIDiscoverer(tsClient),
 			Frequency: pollLimit,
 		})
 	}
 
-	if clientId != "" && clientSecret != "" {
+	if clientID != "" && clientSecret != "" {
+		tsClient := &tailscale.Client{
+			Tailnet: tailnet,
+			HTTP: tailscale.OAuthConfig{
+				ClientID:     clientID,
+				ClientSecret: clientSecret,
+			}.HTTPClient(),
+		}
 		ts = append(ts, &tailscalesd.RateLimitedDiscoverer{
-			Wrap:      tailscalesd.OAuthAPI(clientId, clientSecret),
+			Wrap:      tailscalesd.PublicAPIDiscoverer(tsClient),
 			Frequency: pollLimit,
 		})
 	}
@@ -145,6 +164,11 @@ func main() {
 	http.Handle("/", tailscalesd.Export(ts, filters...))
 
 	log.Printf("Serving Tailscale service discovery on %q", address)
-	log.Print(http.ListenAndServe(address, nil))
+	server := &http.Server{
+		Addr:         address,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+	log.Print(server.ListenAndServe())
 	log.Print("Done")
 }

@@ -1,0 +1,220 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: tailscalesd
+    main: "./cmd/tailscalesd/"
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    goos:
+      - linux
+      - windows
+      - darwin
+      - freebsd
+      - openbsd
+    goarch:
+      - amd64
+      - arm
+      - arm64
+      - '386'
+      - s390x
+      - ppc64le
+      - riscv64
+      - mips64
+      - mips64le
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    ldflags:
+      - -s -w
+      - -X 'tailscaled/cmd/tailscaled.Version={{.Version}}'
+      - -X 'tailscaled/cmd/tailscaled.Commit={{.Commit}}'
+      - -X 'tailscaled/cmd/tailscaled.Date={{.Date}}'
+      - -extldflags "-static"
+
+archives:
+  - formats: ['tar.xz']
+    files:
+        - README.md
+    format_overrides:
+      - goos: windows
+        formats: ['zip']
+    name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ .Version }}-snapshot-{{ .ShortCommit }}"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+
+signs:
+  - artifacts: all
+    args:
+      - "--batch"
+      - "--local-user"
+      - "{{ .Env.GPG_FINGERPRINT }}"
+      - "--output"
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"
+
+sboms:
+  - artifacts: archive
+
+release:
+  draft: true
+  footer: >-
+    ---
+
+    Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
+
+
+nfpms:
+  -
+    package_name: tailscalesd
+    vendor: Cyb3rJak3
+    homepage: https://github.com/Cyb3r-Jak3/tailscalesd/
+    maintainer: Cyb3rJak3 <git@cyberjake.xyz>
+    description: >-
+      Atlas Stats Exporter is a tool for exporting Atlas stats to various
+      monitoring systems, such as Prometheus, InfluxDB, and more.
+    license: Apache-2.0
+    formats:
+      - apk
+      - deb
+      - rpm
+    provides:
+      - tailscalesd
+    section: default
+    priority: extra
+    contents:
+      - src: LICENSE
+        dst: /usr/share/licenses/{{ .ProjectName }}/LICENSE.md
+      - src: README.md
+        dst: /usr/share/doc/{{ .ProjectName }}/README.md
+
+blobs:
+  - provider: s3
+    region: auto
+    endpoint: https://8be772befd147a8df540aae0fa15c047.r2.cloudflarestorage.com
+    bucket: public-files
+
+#announce:
+#  bluesky:
+#    enabled: true
+#    username: releases.cyberjake.xyz
+
+dockers:
+  - id: tailscalesd-linux-amd64
+    goos: linux
+    goarch: amd64
+    use: buildx
+    image_templates:
+      - "cyb3rjak3/tailscalesd:latest-amd64"
+      - "cyb3rjak3/tailscalesd:{{ .Tag }}-amd64"
+      - "cyb3rjak3/tailscalesd:v{{ .Major }}-amd64"
+      - "ghcr.io/cyb3r-jak3/tailscalesd:latest-amd64"
+      - "ghcr.io/cyb3r-jak3/tailscalesd:{{ .Tag }}-amd64"
+      - "ghcr.io/cyb3r-jak3/tailscalesd:v{{ .Major }}-amd64"
+
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--platform=linux/amd64"
+
+  - id: tailscalesd-linux-arm64
+    goos: linux
+    goarch: arm64
+    use: buildx
+    image_templates:
+      - "cyb3rjak3/tailscalesd:latest-arm64"
+      - "cyb3rjak3/tailscalesd:{{ .Tag }}-arm64"
+      - "cyb3rjak3/tailscalesd:v{{ .Major }}-arm64"
+      - "ghcr.io/cyb3r-jak3/tailscalesd:latest-arm64"
+      - "ghcr.io/cyb3r-jak3/tailscalesd:{{ .Tag }}-arm64"
+      - "ghcr.io/cyb3r-jak3/tailscalesd:v{{ .Major }}-arm64"
+
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--platform=linux/arm64"
+
+  - id: tailscalesd-linux-arm
+    goos: linux
+    goarch: arm
+    use: buildx
+    image_templates:
+      - "cyb3rjak3/tailscalesd:latest-arm"
+      - "cyb3rjak3/tailscalesd:{{ .Tag }}-arm"
+      - "cyb3rjak3/tailscalesd:v{{ .Major }}-arm"
+      - "ghcr.io/cyb3r-jak3/tailscalesd:latest-arm"
+      - "ghcr.io/cyb3r-jak3/tailscalesd:{{ .Tag }}-arm"
+      - "ghcr.io/cyb3r-jak3/tailscalesd:v{{ .Major }}-arm"
+
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--platform=linux/arm"
+
+docker_manifests:
+  - id: docker-latest
+    name_template: "cyb3rjak3/tailscalesd:latest"
+    image_templates:
+      - "cyb3rjak3/tailscalesd:latest-amd64"
+      - "cyb3rjak3/tailscalesd:latest-arm64"
+      - "cyb3rjak3/tailscalesd:latest-arm"
+  - id: docker-major
+    name_template: "cyb3rjak3/tailscalesd:v{{ .Major }}"
+    image_templates:
+      - "cyb3rjak3/tailscalesd:v{{ .Major }}-amd64"
+      - "cyb3rjak3/tailscalesd:v{{ .Major }}-arm64"
+      - "cyb3rjak3/tailscalesd:v{{ .Major }}-arm"
+  - id: docker-tag
+    name_template: "cyb3rjak3/tailscalesd:{{ .Tag }}"
+    image_templates:
+      - "cyb3rjak3/tailscalesd:{{ .Tag }}-amd64"
+      - "cyb3rjak3/tailscalesd:{{ .Tag }}-arm64"
+      - "cyb3rjak3/tailscalesd:{{ .Tag }}-arm"
+
+  - id: github-latest
+    name_template: "ghcr.io/cyb3r-jak3/tailscalesd:latest"
+    image_templates:
+      - "ghcr.io/cyb3r-jak3/tailscalesd:latest-amd64"
+      - "ghcr.io/cyb3r-jak3/tailscalesd:latest-arm64"
+      -  "ghcr.io/cyb3r-jak3/tailscalesd:latest-arm"
+  - id: github-major
+    name_template: "ghcr.io/cyb3r-jak3/tailscalesd:v{{ .Major }}"
+    image_templates:
+      - "ghcr.io/cyb3r-jak3/tailscalesd:v{{ .Major }}-amd64"
+      - "ghcr.io/cyb3r-jak3/tailscalesd:v{{ .Major }}-arm64"
+      - "ghcr.io/cyb3r-jak3/tailscalesd:v{{ .Major }}-arm"
+
+  - id: github-tag
+    name_template: "ghcr.io/cyb3r-jak3/tailscalesd:{{ .Tag }}"
+    image_templates:
+      - "ghcr.io/cyb3r-jak3/tailscalesd:{{ .Tag }}-amd64"
+      - "ghcr.io/cyb3r-jak3/tailscalesd:{{ .Tag }}-arm64"
+      - "ghcr.io/cyb3r-jak3/tailscalesd:{{ .Tag }}-arm"

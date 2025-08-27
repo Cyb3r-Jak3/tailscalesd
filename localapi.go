@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/netip"
@@ -17,7 +18,7 @@ import (
 // listens locally.
 const LocalAPISocket = "/run/tailscale/tailscaled.sock"
 
-// interstingStatusSubset is a json-decodeable subset of the Status struct
+// interestingStatusSubset is a json-decodeable subset of the Status struct
 // served by the Tailscale local API. This is done to prevent pulling the
 // Tailscale code base and its dependencies into this module. The fields were
 // borrowed from version 1.22.2. For field details, see:
@@ -67,11 +68,17 @@ func (a *localAPIClient) status(ctx context.Context) (interestingStatusSubset, e
 		apiRequestErrorCounter.With(lv).Inc()
 		return status, err
 	}
+	defer resp.Body.Close()
 	if (resp.StatusCode / 100) != 2 {
 		apiRequestErrorCounter.With(lv).Inc()
 		return status, fmt.Errorf("%w: %v", errFailedLocalAPIRequest, resp.Status)
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			apiRequestErrorCounter.With(lv).Inc()
+		}
+	}(resp.Body)
 
 	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
 		apiPayloadErrorCounter.With(lv).Inc()

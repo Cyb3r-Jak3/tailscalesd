@@ -1,40 +1,26 @@
-.PHONY = all clean
+PHONY: build snapshot lint test
+GIT_VERSION ?= $(shell git describe --tags --always --dirty="-dev")
+DATE ?= $(shell date -u '+%Y-%m-%d %H:%M UTC')
+VERSION_FLAGS := -s -w -X "main.version=$(GIT_VERSION)" -X "main.date=$(DATE)"
+.DEFAULT_GOAL := build
+DOCS_DIR := $(CURDIR)/documentation
+GOTESTSUM_JUNITFILE ?= $(CURDIR)/-junit.xml
 
-PLATFORMS := linux-arm6 linux-arm7 linux-amd64 linux-386 darwin-amd64
-VERSION := $(shell git describe --always --tags --dirty="-dev-$$(git rev-parse --short HEAD)")
-MAIN := ./cmd/tailscalesd
-
-BUILDCMD := go build -o
-ifneq ($(strip $(VERSION)),)
-	BUILDCMD := go build -ldflags="-X 'main.Version=$(VERSION)'" -o
-endif
-
-
-DISTTARGETS := $(foreach ku,$(PLATFORMS),tailscalesd-$(ku))
 SUMS := SHA1SUM.txt SHA256SUM.txt
 
-all: tailscalesd
+all: build
+
+build:
+	go build -trimpath -ldflags='$(VERSION_FLAGS) -extldflags -static' ./...
+
+snapshot:
+	goreleaser --snapshot --clean --skip=publish,sign
 
 test:
-	go test -v ./... -bench=.
+	@gotestsum --format testname --junitfile junit.xml -- -coverprofile=cover.out ./...
 
-tailscalesd:
-	$(BUILDCMD) $@ $(MAIN)
-
-dist: $(DISTTARGETS) $(SUMS)
-	@chmod +x $(DISTTARGETS)
-
-tailscalesd-linux-arm%:
-	env GOOS=linux GOARCH=arm GOARM=$* $(BUILDCMD) $@ $(MAIN)
-
-tailscalesd-linux-%:
-	env GOOS=linux GOARCH=$* $(BUILDCMD) $@ $(MAIN)
-
-tailscalesd-darwin-%:
-	env GOOS=darwin GOARCH=$* $(BUILDCMD) $@ $(MAIN)
-
-SHA%SUM.txt: $(DISTTARGETS)
-	shasum -a $* $(DISTTARGETS) > $@
+lint:
+	golangci-lint run --config .golangci-lint.yml ./...
 
 clean:
 	@rm -fv $(DISTTARGETS) $(SUMS) tailscalesd

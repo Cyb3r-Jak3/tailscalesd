@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -80,7 +81,7 @@ type TargetDescriptor struct {
 	Labels  map[string]string `json:"labels,omitempty"`
 }
 
-// TargetFilter maniupulates TargetDescriptors before being served.
+// TargetFilter manipulates TargetDescriptors before being served.
 type TargetFilter func(TargetDescriptor) TargetDescriptor
 
 // FilterIPv6Addresses from TargetDescriptors. Results in only IPv4 targets.
@@ -183,7 +184,7 @@ func (h *discoveryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	devices, err := h.d.Devices(r.Context())
 	if err != nil {
-		if err != errStaleResults {
+		if !errors.Is(err, errStaleResults) {
 			w.WriteHeader(http.StatusInternalServerError)
 			serveAndLog(w, fmt.Sprintf("Failed to discover Tailscale devices: %v", err))
 			return
