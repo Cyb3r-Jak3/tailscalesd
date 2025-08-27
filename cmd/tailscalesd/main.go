@@ -93,9 +93,9 @@ func main() {
 	flag.Parse()
 
 	if printVer {
-		versionString := fmt.Sprintf("%s (built %s)", Version, Date)
+		versionString := fmt.Sprintf("%s (%s) (built %s)", Version, Commit, Date)
 		if buildInfo, available := debug.ReadBuildInfo(); available {
-			versionString = fmt.Sprintf("%s (built %s with %s)", Version, Date, buildInfo.GoVersion)
+			versionString = fmt.Sprintf("%s (%s) (built %s with %s)", Version, Commit, Date, buildInfo.GoVersion)
 		}
 		fmt.Printf("tailscalesd version %s\n", versionString)
 		return
